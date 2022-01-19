@@ -1,0 +1,37 @@
+import os
+import sys
+import pandas as pd
+import math
+import os.path
+from time import sleep
+from datetime import datetime, timedelta, time
+import traceback
+from binance.client import Client
+import ccxt
+
+
+
+with open("binance_key.txt") as f:    # call the restored api key
+    lines = f.readlines()
+    key = lines[0].strip()
+    secret = lines[1].strip()
+    binance_client = Client(api_key = key, api_secret = secret)
+    binance = ccxt.binance({'apiKey': key, 'secret': secret})
+
+def buy_crypto_currency(ticker):
+    global price_bought
+    gbp = binance_client.get_asset_balance(asset = "USDT")["free"]                          # account balance
+    #current_market_price = binance_client.get_symbol_ticker(symbol = ticker)["price"]      # last market price
+    lowest_ask_price = binance_client.get_order_book(symbol = ticker)["asks"][0][0]         # lowest asking price
+    unit = float(gbp)/float(lowest_ask_price)                                               # calculate how many coins I can get with the balance
+    unit = math.floor(unit*1000000)/1000000                                                         ## Decimal point
+    print(unit)
+    print(f"Attempt to BUY {unit} amount of {ticker}")
+    buy_market = binance_client.order_limit_buy(symbol = ticker, quantity = unit, price = lowest_ask_price)      # executing the trade
+    print(buy_market)
+    price_bought = float(buy_market['price'])
+    print(price_bought)
+    print(f"### BUYing '{unit}' of '{ticker}' coin at '{lowest_ask_price} USDT' ### ")
+    return price_bought
+
+buy_crypto_currency("XRPUSDT")

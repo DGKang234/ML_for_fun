@@ -1,0 +1,37 @@
+import ccxt
+import pandas as pd
+import math
+import os.path
+import time
+from datetime import datetime, timedelta
+from binance.client import Client
+import numpy as np
+
+binance = ccxt.binance({
+    'apiKey': 'DciiuE72NLhLb4gGqXdZBrFJinKrAucg9SgIEM4rW1XqSW5me7N8nm4M6Nv3TRmP',
+    'secret': 'MJkWmqeSmOPI6CXWFPReMM6uhX8ng3KhvNoAYQoZmsiVbitZmJSJPZWfV4T186Cg',
+})
+
+ticker_1 = str.upper(input("What coin would you like to buy? : "))
+ticker = ticker_1 + '/USDT'
+k = float(input("what is k value? : "))
+
+ohlcvs = binance.fetch_ohlcv(ticker, '1d', binance.parse8601('2021-04-05 00:00:00'))
+df = pd.DataFrame(ohlcvs, columns = ['time', 'open', 'high', 'low', 'close', 'volume'])
+df['time'] = pd.to_datetime(df['time'], unit='ms')
+df = df.set_index('time')
+df['range'] = (df['high'] - df['low']) * k
+df['target'] = df['open'] + df['range'].shift(1)
+
+fee = 0.0032
+df['ror'] = np.where(df['high'] > df['target'],
+                     df['close'] / df['target'] - fee,
+                     1)
+ror = df['ror'].cumprod()
+ror = ror.iloc[-2]
+
+df['hpr'] = df['ror'].cumprod()
+df['dd'] = (df['hpr'].cummax() - df['hpr']) / df['hpr'].cummax() * 100
+print("MDD(%): ", df['dd'].max())
+print(f"Yield(%) : {ror*100}")
+df.to_excel("B_BT_" + ticker_1 + ".xlsx")
